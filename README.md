@@ -1,2 +1,2 @@
 # nfma_kg_llm
-Knowledge graph using Large Language Model
+This code aims to convert any input text into a knowledge graph using Large Language Models.

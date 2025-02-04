@@ -8,7 +8,7 @@ Source: https://neo4j.com/blog/what-is-knowledge-graph/
 ## Overview
 The code creates a simple knowledge graph from a PDF/Word document. The process the general idea of producing a knowledge graph with some simplifications.
 
-First, we split the body of text into chunks. Then we extract concepts mentioned within each chunk using an LLM. This performs better than identifying entities.
+First, we split the body of text into chunks. Then we extract concepts mentioned within each chunk using an LLM. This performs better than identifying entities. These concepts are identified using the prompts supplied to the large language model, just like one would submit prompts to OpenAI's Chat GPT. However, this program uses an open-source model from Mistral AI.
 
 Assuming that the concepts that are mentioned in the vicinity of each other are related, the edges in the KG are chunks of text which mention the two connected texts.
 

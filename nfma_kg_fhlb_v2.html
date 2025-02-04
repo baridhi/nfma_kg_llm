@@ -1,0 +1,751 @@
+<html>
+    <head>
+        <meta charset="utf-8">
+        
+            <script>function neighbourhoodHighlight(params) {
+  // console.log("in nieghbourhoodhighlight");
+  allNodes = nodes.get({ returnType: "Object" });
+  // originalNodes = JSON.parse(JSON.stringify(allNodes));
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    highlightActive = true;
+    var i, j;
+    var selectedNode = params.nodes[0];
+    var degrees = 2;
+
+    // mark all nodes as hard to read.
+    for (let nodeId in allNodes) {
+      // nodeColors[nodeId] = allNodes[nodeId].color;
+      allNodes[nodeId].color = "rgba(200,200,200,0.5)";
+      if (allNodes[nodeId].hiddenLabel === undefined) {
+        allNodes[nodeId].hiddenLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+    var connectedNodes = network.getConnectedNodes(selectedNode);
+    var allConnectedNodes = [];
+
+    // get the second degree nodes
+    for (i = 1; i < degrees; i++) {
+      for (j = 0; j < connectedNodes.length; j++) {
+        allConnectedNodes = allConnectedNodes.concat(
+          network.getConnectedNodes(connectedNodes[j])
+        );
+      }
+    }
+
+    // all second degree nodes get a different color and their label back
+    for (i = 0; i < allConnectedNodes.length; i++) {
+      // allNodes[allConnectedNodes[i]].color = "pink";
+      allNodes[allConnectedNodes[i]].color = "rgba(150,150,150,0.75)";
+      if (allNodes[allConnectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[allConnectedNodes[i]].label =
+          allNodes[allConnectedNodes[i]].hiddenLabel;
+        allNodes[allConnectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // all first degree nodes get their own color and their label back
+    for (i = 0; i < connectedNodes.length; i++) {
+      // allNodes[connectedNodes[i]].color = undefined;
+      allNodes[connectedNodes[i]].color = nodeColors[connectedNodes[i]];
+      if (allNodes[connectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[connectedNodes[i]].label =
+          allNodes[connectedNodes[i]].hiddenLabel;
+        allNodes[connectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // the main node gets its own color and its label back.
+    // allNodes[selectedNode].color = undefined;
+    allNodes[selectedNode].color = nodeColors[selectedNode];
+    if (allNodes[selectedNode].hiddenLabel !== undefined) {
+      allNodes[selectedNode].label = allNodes[selectedNode].hiddenLabel;
+      allNodes[selectedNode].hiddenLabel = undefined;
+    }
+  } else if (highlightActive === true) {
+    // console.log("highlightActive was true");
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      // allNodes[nodeId].color = "purple";
+      allNodes[nodeId].color = nodeColors[nodeId];
+      // delete allNodes[nodeId].color;
+      if (allNodes[nodeId].hiddenLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].hiddenLabel;
+        allNodes[nodeId].hiddenLabel = undefined;
+      }
+    }
+    highlightActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    // console.log("Nothing was selected");
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        // allNodes[nodeId].color = {};
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function filterHighlight(params) {
+  allNodes = nodes.get({ returnType: "Object" });
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    filterActive = true;
+    let selectedNodes = params.nodes;
+
+    // hiding all nodes and saving the label
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = true;
+      if (allNodes[nodeId].savedLabel === undefined) {
+        allNodes[nodeId].savedLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+
+    for (let i=0; i < selectedNodes.length; i++) {
+      allNodes[selectedNodes[i]].hidden = false;
+      if (allNodes[selectedNodes[i]].savedLabel !== undefined) {
+        allNodes[selectedNodes[i]].label = allNodes[selectedNodes[i]].savedLabel;
+        allNodes[selectedNodes[i]].savedLabel = undefined;
+      }
+    }
+
+  } else if (filterActive === true) {
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = false;
+      if (allNodes[nodeId].savedLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].savedLabel;
+        allNodes[nodeId].savedLabel = undefined;
+      }
+    }
+    filterActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function selectNode(nodes) {
+  network.selectNodes(nodes);
+  neighbourhoodHighlight({ nodes: nodes });
+  return nodes;
+}
+
+function selectNodes(nodes) {
+  network.selectNodes(nodes);
+  filterHighlight({nodes: nodes});
+  return nodes;
+}
+
+function highlightFilter(filter) {
+  let selectedNodes = []
+  let selectedProp = filter['property']
+  if (filter['item'] === 'node') {
+    let allNodes = nodes.get({ returnType: "Object" });
+    for (let nodeId in allNodes) {
+      if (allNodes[nodeId][selectedProp] && filter['value'].includes((allNodes[nodeId][selectedProp]).toString())) {
+        selectedNodes.push(nodeId)
+      }
+    }
+  }
+  else if (filter['item'] === 'edge'){
+    let allEdges = edges.get({returnType: 'object'});
+    // check if the selected property exists for selected edge and select the nodes connected to the edge
+    for (let edge in allEdges) {
+      if (allEdges[edge][selectedProp] && filter['value'].includes((allEdges[edge][selectedProp]).toString())) {
+        selectedNodes.push(allEdges[edge]['from'])
+        selectedNodes.push(allEdges[edge]['to'])
+      }
+    }
+  }
+  selectNodes(selectedNodes)
+}</script>
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/dist/vis-network.min.css" integrity="sha512-WgxfT5LWjfszlPHXRmBWHkV2eceiWTOBvrKCNbdgDYTHrT2AeLCGbF4sZlZw3UMN3WtL0tGUoIAKsu8mllg/XA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/vis-network.min.js" integrity="sha512-LnvoEWDFrqGHlHmDD2101OrLcbsfkrzoSpvtSQtxK3RMnRV0eOkhhBN2dXHKRrUU8p2DGRTk35n4O8nWSVe1mQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+            
+            
+            
+            
+            
+                <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tom-select/2.0.0-rc.4/css/tom-select.min.css" integrity="sha512-43fHB3GLgZfz8QXl1RPQ8O66oIgv3po9cJ5erMt1c4QISq9dYb195T3vr5ImnJPXuVroKcGBPXBFKETW8jrPNQ==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+                <script src="https://cdnjs.cloudflare.com/ajax/libs/tom-select/2.0.0-rc.4/js/tom-select.complete.js" integrity="sha512-jeF9CfnvzDiw9G9xiksVjxR2lib44Gnovvkv+3CgCG6NXCD4gqlA5nDAVW5WjpA+i+/zKsUWV5xNEbW1X/HH0Q==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+
+        
+<center>
+<h1></h1>
+</center>
+
+<!-- <link rel="stylesheet" href="../node_modules/vis/dist/vis.min.css" type="text/css" />
+<script type="text/javascript" src="../node_modules/vis/dist/vis.js"> </script>-->
+        <link
+          href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/css/bootstrap.min.css"
+          rel="stylesheet"
+          integrity="sha384-eOJMYsd53ii+scO/bJGFsiCZc+5NDVN2yr8+0RDqr0Ql0h+rP48ckxlpbzKgwra6"
+          crossorigin="anonymous"
+        />
+        <script
+          src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/js/bootstrap.bundle.min.js"
+          integrity="sha384-JEW9xMcG8R+pH31jmWH6WWP0WintQrMb4s7ZOdauHnUtxwoG2vI5DkLtS3qm9Ekf"
+          crossorigin="anonymous"
+        ></script>
+
+
+        <center>
+          <h1></h1>
+        </center>
+        <style type="text/css">
+
+             #mynetwork {
+                 width: 100%;
+                 height: 900px;
+                 background-color: #ffffff;
+                 border: 1px solid lightgray;
+                 position: relative;
+                 float: left;
+             }
+
+             
+             #loadingBar {
+                 position:absolute;
+                 top:0px;
+                 left:0px;
+                 width: 100%;
+                 height: 900px;
+                 background-color:rgba(200,200,200,0.8);
+                 -webkit-transition: all 0.5s ease;
+                 -moz-transition: all 0.5s ease;
+                 -ms-transition: all 0.5s ease;
+                 -o-transition: all 0.5s ease;
+                 transition: all 0.5s ease;
+                 opacity:1;
+             }
+
+             #bar {
+                 position:absolute;
+                 top:0px;
+                 left:0px;
+                 width:20px;
+                 height:20px;
+                 margin:auto auto auto auto;
+                 border-radius:11px;
+                 border:2px solid rgba(30,30,30,0.05);
+                 background: rgb(0, 173, 246); /* Old browsers */
+                 box-shadow: 2px 0px 4px rgba(0,0,0,0.4);
+             }
+
+             #border {
+                 position:absolute;
+                 top:10px;
+                 left:10px;
+                 width:500px;
+                 height:23px;
+                 margin:auto auto auto auto;
+                 box-shadow: 0px 0px 4px rgba(0,0,0,0.2);
+                 border-radius:10px;
+             }
+
+             #text {
+                 position:absolute;
+                 top:8px;
+                 left:530px;
+                 width:30px;
+                 height:50px;
+                 margin:auto auto auto auto;
+                 font-size:22px;
+                 color: #000000;
+             }
+
+             div.outerBorder {
+                 position:relative;
+                 top:400px;
+                 width:600px;
+                 height:44px;
+                 margin:auto auto auto auto;
+                 border:8px solid rgba(0,0,0,0.1);
+                 background: rgb(252,252,252); /* Old browsers */
+                 background: -moz-linear-gradient(top,  rgba(252,252,252,1) 0%, rgba(237,237,237,1) 100%); /* FF3.6+ */
+                 background: -webkit-gradient(linear, left top, left bottom, color-stop(0%,rgba(252,252,252,1)), color-stop(100%,rgba(237,237,237,1))); /* Chrome,Safari4+ */
+                 background: -webkit-linear-gradient(top,  rgba(252,252,252,1) 0%,rgba(237,237,237,1) 100%); /* Chrome10+,Safari5.1+ */
+                 background: -o-linear-gradient(top,  rgba(252,252,252,1) 0%,rgba(237,237,237,1) 100%); /* Opera 11.10+ */
+                 background: -ms-linear-gradient(top,  rgba(252,252,252,1) 0%,rgba(237,237,237,1) 100%); /* IE10+ */
+                 background: linear-gradient(to bottom,  rgba(252,252,252,1) 0%,rgba(237,237,237,1) 100%); /* W3C */
+                 filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#fcfcfc', endColorstr='#ededed',GradientType=0 ); /* IE6-9 */
+                 border-radius:72px;
+                 box-shadow: 0px 0px 10px rgba(0,0,0,0.2);
+             }
+             
+
+             
+             #config {
+                 float: left;
+                 width: 400px;
+                 height: 600px;
+             }
+             
+
+             
+        </style>
+    </head>
+
+
+    <body>
+        <div class="card" style="width: 100%">
+            
+                <div id="select-menu" class="card-header">
+                    <div class="row no-gutters">
+                        <div class="col-10 pb-2">
+                            <select
+                            class="form-select"
+                            aria-label="Default select example"
+                            onchange="selectNode([value]);"
+                            id="select-node"
+                            placeholder="Select node..."
+                            >
+                                <option selected>Select a Node by ID</option>
+                                
+                                    <option value="7 revenue bonds">7 revenue bonds</option>
+                                
+                                    <option value="housing revenue bonds">housing revenue bonds</option>
+                                
+                                    <option value="issuer requirements">issuer requirements</option>
+                                
+                                    <option value="real estate nexus">real estate nexus</option>
+                                
+                                    <option value="use of proceeds requirements">use of proceeds requirements</option>
+                                
+                                    <option value="acquisition of real estate">acquisition of real estate</option>
+                                
+                                    <option value="equipment purchases and upgrades">equipment purchases and upgrades</option>
+                                
+                                    <option value="food stores">food stores</option>
+                                
+                                    <option value="jails">jails</option>
+                                
+                                    <option value="land improvement">land improvement</option>
+                                
+                                    <option value="low- and moderate-cost housing">low- and moderate-cost housing</option>
+                                
+                                    <option value="maintaining existing facilities">maintaining existing facilities</option>
+                                
+                                    <option value="multifamily housing">multifamily housing</option>
+                                
+                                    <option value="nursing homes">nursing homes</option>
+                                
+                                    <option value="org operating expenses">org operating expenses</option>
+                                
+                                    <option value="park and recreational facilities">park and recreational facilities</option>
+                                
+                                    <option value="public facilities">public facilities</option>
+                                
+                                    <option value="school or school upgrades">school or school upgrades</option>
+                                
+                                    <option value="single-family housing">single-family housing</option>
+                                
+                                    <option value="assistance">assistance</option>
+                                
+                                    <option value="combination with a first mortgage product offered by the hfa">combination with a first mortgage product offered by the hfa</option>
+                                
+                                    <option value="down payment and closing cost assistance">down payment and closing cost assistance</option>
+                                
+                                    <option value="down payment and closing cost assistance (as offered by hfas)">down payment and closing cost assistance (as offered by hfas)</option>
+                                
+                                    <option value="first-time homebuyers">first-time homebuyers</option>
+                                
+                                    <option value="low- and moderate-income">low- and moderate-income</option>
+                                
+                                    <option value="state housing finance agencies (hfas)">state housing finance agencies (hfas)</option>
+                                
+                                    <option value="targeted populations">targeted populations</option>
+                                
+                                    <option value="below market financing options">below market financing options</option>
+                                
+                                    <option value="developers">developers</option>
+                                
+                                    <option value="rental programs">rental programs</option>
+                                
+                                    <option value="bonds issued by municipal water and sewer authority">bonds issued by municipal water and sewer authority</option>
+                                
+                                    <option value="local water and sewer assessments">local water and sewer assessments</option>
+                                
+                                    <option value="borrowers">borrowers</option>
+                                
+                                    <option value="capital facilities">capital facilities</option>
+                                
+                                    <option value="deposit into any funds">deposit into any funds</option>
+                                
+                                    <option value="more information">more information</option>
+                                
+                                    <option value="muni.collateral@fhlb.com">muni.collateral@fhlb.com</option>
+                                
+                                    <option value="projects and facilities">projects and facilities</option>
+                                
+                                    <option value="public improvement projects">public improvement projects</option>
+                                
+                                    <option value="capital outlay plan">capital outlay plan</option>
+                                
+                                    <option value="grant">grant</option>
+                                
+                                    <option value="low- and moderate-income, first-time homebuyers or other targeted populations">low- and moderate-income, first-time homebuyers or other targeted populations</option>
+                                
+                                    <option value="second mortgage loan">second mortgage loan</option>
+                                
+                                    <option value="conventional products">conventional products</option>
+                                
+                                    <option value="first-lien mortgage products">first-lien mortgage products</option>
+                                
+                                    <option value="participating lenders">participating lenders</option>
+                                
+                                    <option value="credit rating requirement">credit rating requirement</option>
+                                
+                                    <option value="municipal securities">municipal securities</option>
+                                
+                                    <option value="default in payment">default in payment</option>
+                                
+                                    <option value="revenue bond">revenue bond</option>
+                                
+                                    <option value="hfas">hfas</option>
+                                
+                                    <option value="housing tax credits">housing tax credits</option>
+                                
+                                    <option value="low- and moderate- income families">low- and moderate- income families</option>
+                                
+                                    <option value="subsidy funds">subsidy funds</option>
+                                
+                                    <option value="education revenue bonds">education revenue bonds</option>
+                                
+                                    <option value="higher- education facilities">higher- education facilities</option>
+                                
+                                    <option value="effective date">effective date</option>
+                                
+                                    <option value="municipal security collateral eligibility requirements">municipal security collateral eligibility requirements</option>
+                                
+                                    <option value="essential services">essential services</option>
+                                
+                                    <option value="issuer">issuer</option>
+                                
+                                    <option value="revenue bonds">revenue bonds</option>
+                                
+                                    <option value="security">security</option>
+                                
+                                    <option value="facilities for essential public services">facilities for essential public services</option>
+                                
+                                    <option value="federal home loan bank of dallas">federal home loan bank of dallas</option>
+                                
+                                    <option value="federal programs or through private mortgage insurance">federal programs or through private mortgage insurance</option>
+                                
+                                    <option value="state or local government">state or local government</option>
+                                
+                                    <option value="targeted to first-time homeowners meeting certain income and purchase price requirements">targeted to first-time homeowners meeting certain income and purchase price requirements</option>
+                                
+                                    <option value="financial institutions">financial institutions</option>
+                                
+                                    <option value="low- and moderate-income borrowers">low- and moderate-income borrowers</option>
+                                
+                                    <option value="purpose">purpose</option>
+                                
+                                    <option value="foreign governments">foreign governments</option>
+                                
+                                    <option value="full faith and credit of an issuer with taxing power">full faith and credit of an issuer with taxing power</option>
+                                
+                                    <option value="furniture">furniture</option>
+                                
+                                    <option value="hospital beds and medical equipment ">hospital beds and medical equipment </option>
+                                
+                                    <option value="general obligation bonds">general obligation bonds</option>
+                                
+                                    <option value="housing revenue bond">housing revenue bond</option>
+                                
+                                    <option value="local units of government">local units of government</option>
+                                
+                                    <option value="multifamily housing projects">multifamily housing projects</option>
+                                
+                                    <option value="single family mortgage revenue bond">single family mortgage revenue bond</option>
+                                
+                                    <option value="single-family homes">single-family homes</option>
+                                
+                                    <option value="state legislature">state legislature</option>
+                                
+                                    <option value="general obligation of the state or municipal governments or their political subdivisions">general obligation of the state or municipal governments or their political subdivisions</option>
+                                
+                                    <option value="grants">grants</option>
+                                
+                                    <option value="pension funding">pension funding</option>
+                                
+                                    <option value="green energy initiatives not related to real estate (e.g. energy efficient traffic lights, street lights, etc.)">green energy initiatives not related to real estate (e.g. energy efficient traffic lights, street lights, etc.)</option>
+                                
+                                    <option value="renewable energy, solar electric system improvement (not related to real estate)">renewable energy, solar electric system improvement (not related to real estate)</option>
+                                
+                                    <option value="guaranteed by the state or municipal governments or their political subdivisions">guaranteed by the state or municipal governments or their political subdivisions</option>
+                                
+                                    <option value="low- and moderate-income renters and homebuyers">low- and moderate-income renters and homebuyers</option>
+                                
+                                    <option value="highways, streets (not tied to any buildings or facilities), roads, bridges">highways, streets (not tied to any buildings or facilities), roads, bridges</option>
+                                
+                                    <option value="transportation vehicles">transportation vehicles</option>
+                                
+                                    <option value="hospital and health care revenue bonds">hospital and health care revenue bonds</option>
+                                
+                                    <option value="hospitals or health care facilities">hospitals or health care facilities</option>
+                                
+                                    <option value="real estate">real estate</option>
+                                
+                                    <option value="state or municipal governments or their political subdivisions (mpcp)">state or municipal governments or their political subdivisions (mpcp)</option>
+                                
+                                    <option value="sufficient tax revenue">sufficient tax revenue</option>
+                                
+                                    <option value="united states">united states</option>
+                                
+                                    <option value="local housing finance agencies">local housing finance agencies</option>
+                                
+                                    <option value="low- and moderate-income families">low- and moderate-income families</option>
+                                
+                                    <option value="mortgage loans">mortgage loans</option>
+                                
+                                    <option value="purchase of mortgage-backed securities">purchase of mortgage-backed securities</option>
+                                
+                                    <option value="security of payment requirements">security of payment requirements</option>
+                                
+                                    <option value="state or municipal governments or their political subdivisions">state or municipal governments or their political subdivisions</option>
+                                
+                                    <option value="valuation requirement">valuation requirement</option>
+                                
+                                    <option value="operational expenses, capitalized operational expenses">operational expenses, capitalized operational expenses</option>
+                                
+                                    <option value="administrative expenses unrelated to real estate or to issuing the municipal securities">administrative expenses unrelated to real estate or to issuing the municipal securities</option>
+                                
+                                    <option value="pipelines (e.g. natural gas pipelines)">pipelines (e.g. natural gas pipelines)</option>
+                                
+                                    <option value="telecommunications network infrastructure">telecommunications network infrastructure</option>
+                                
+                                    <option value="refunding to replace the commercial paper with long-term financing without details on commercial paper proceeds use.">refunding to replace the commercial paper with long-term financing without details on commercial paper proceeds use.</option>
+                                
+                                    <option value="municipal securities listed below">municipal securities listed below</option>
+                                
+                                    <option value="specific source of revenue">specific source of revenue</option>
+                                
+                                    <option value="types of pledges">types of pledges</option>
+                                
+                                    <option value="voter approval">voter approval</option>
+                                
+                                    <option value="projects not considered to be an essential service">projects not considered to be an essential service</option>
+                                
+                                    <option value="software">software</option>
+                                
+                                    <option value="computers">computers</option>
+                                
+                                    <option value="state housing finance agencies">state housing finance agencies</option>
+                                
+                                    <option value="affordable housing and related community development activities">affordable housing and related community development activities</option>
+                                
+                                    <option value="stormwater drainage and flood control improvement">stormwater drainage and flood control improvement</option>
+                                
+                                    <option value="dredging:">dredging:</option>
+                                
+                                    <option value="transportation revenue bonds">transportation revenue bonds</option>
+                                
+                                    <option value="local public transportation projects">local public transportation projects</option>
+                                
+                                    <option value="water and sewer/public power electric utilities bonds">water and sewer/public power electric utilities bonds</option>
+                                
+                                    <option value="sanitation or water utility facilities">sanitation or water utility facilities</option>
+                                
+                                    <option value="water supply or sewer system without facilities or buildings (e.g. pipelines, trunk)">water supply or sewer system without facilities or buildings (e.g. pipelines, trunk)</option>
+                                
+                                    <option value="pumping station ">pumping station </option>
+                                
+                            </select>
+                        </div>
+                        <div class="col-2 pb-2">
+                            <button type="button" class="btn btn-primary btn-block" onclick="neighbourhoodHighlight({nodes: []});">Reset Selection</button>
+                        </div>
+                    </div>
+                </div>
+            
+            
+            <div id="mynetwork" class="card-body"></div>
+        </div>
+
+        
+            <div id="loadingBar">
+              <div class="outerBorder">
+                <div id="text">0%</div>
+                <div id="border">
+                  <div id="bar"></div>
+                </div>
+              </div>
+            </div>
+        
+        
+            <div id="config"></div>
+        
+
+        <script type="text/javascript">
+
+              // initialize global variables.
+              var edges;
+              var nodes;
+              var allNodes;
+              var allEdges;
+              var nodeColors;
+              var originalNodes;
+              var network;
+              var container;
+              var options, data;
+              var filter = {
+                  item : '',
+                  property : '',
+                  value : []
+              };
+
+              
+                  new TomSelect("#select-node",{
+                      create: false,
+                      sortField: {
+                          field: "text",
+                          direction: "asc"
+                      }
+                  });
+              
+
+              
+
+              // This method is responsible for drawing the graph, returns the drawn network
+              function drawGraph() {
+                  var container = document.getElementById('mynetwork');
+
+                  
+
+                  // parsing and collecting nodes and edges from the python
+                  nodes = new vis.DataSet([{"group": 1, "id": "7 revenue bonds", "label": "7 revenue bonds", "shape": "dot", "size": 4}, {"group": 1, "id": "housing revenue bonds", "label": "housing revenue bonds", "shape": "dot", "size": 4}, {"group": 1, "id": "issuer requirements", "label": "issuer requirements", "shape": "dot", "size": 5}, {"group": 1, "id": "real estate nexus", "label": "real estate nexus", "shape": "dot", "size": 4}, {"group": 1, "id": "use of proceeds requirements", "label": "use of proceeds requirements", "shape": "dot", "size": 5}, {"group": 2, "id": "acquisition of real estate", "label": "acquisition of real estate", "shape": "dot", "size": 13}, {"group": 2, "id": "equipment purchases and upgrades", "label": "equipment purchases and upgrades", "shape": "dot", "size": 9}, {"group": 2, "id": "food stores", "label": "food stores", "shape": "dot", "size": 13}, {"group": 2, "id": "jails", "label": "jails", "shape": "dot", "size": 13}, {"group": 2, "id": "land improvement", "label": "land improvement", "shape": "dot", "size": 13}, {"group": 2, "id": "low- and moderate-cost housing", "label": "low- and moderate-cost housing", "shape": "dot", "size": 9}, {"group": 2, "id": "maintaining existing facilities", "label": "maintaining existing facilities", "shape": "dot", "size": 9}, {"group": 2, "id": "multifamily housing", "label": "multifamily housing", "shape": "dot", "size": 9}, {"group": 2, "id": "nursing homes", "label": "nursing homes", "shape": "dot", "size": 13}, {"group": 2, "id": "org operating expenses", "label": "org operating expenses", "shape": "dot", "size": 9}, {"group": 2, "id": "park and recreational facilities", "label": "park and recreational facilities", "shape": "dot", "size": 13}, {"group": 2, "id": "public facilities", "label": "public facilities", "shape": "dot", "size": 13}, {"group": 2, "id": "school or school upgrades", "label": "school or school upgrades", "shape": "dot", "size": 13}, {"group": 2, "id": "single-family housing", "label": "single-family housing", "shape": "dot", "size": 13}, {"group": 5, "id": "assistance", "label": "assistance", "shape": "dot", "size": 7}, {"group": 5, "id": "combination with a first mortgage product offered by the hfa", "label": "combination with a first mortgage product offered by the hfa", "shape": "dot", "size": 10}, {"group": 5, "id": "down payment and closing cost assistance", "label": "down payment and closing cost assistance", "shape": "dot", "size": 10}, {"group": 5, "id": "down payment and closing cost assistance (as offered by hfas)", "label": "down payment and closing cost assistance (as offered by hfas)", "shape": "dot", "size": 10}, {"group": 5, "id": "first-time homebuyers", "label": "first-time homebuyers", "shape": "dot", "size": 10}, {"group": 5, "id": "low- and moderate-income", "label": "low- and moderate-income", "shape": "dot", "size": 10}, {"group": 5, "id": "state housing finance agencies (hfas)", "label": "state housing finance agencies (hfas)", "shape": "dot", "size": 10}, {"group": 5, "id": "targeted populations", "label": "targeted populations", "shape": "dot", "size": 10}, {"group": 6, "id": "below market financing options", "label": "below market financing options", "shape": "dot", "size": 2}, {"group": 6, "id": "developers", "label": "developers", "shape": "dot", "size": 7}, {"group": 6, "id": "rental programs", "label": "rental programs", "shape": "dot", "size": 7}, {"group": 7, "id": "bonds issued by municipal water and sewer authority", "label": "bonds issued by municipal water and sewer authority", "shape": "dot", "size": 1}, {"group": 7, "id": "local water and sewer assessments", "label": "local water and sewer assessments", "shape": "dot", "size": 1}, {"group": 6, "id": "borrowers", "label": "borrowers", "shape": "dot", "size": 2}, {"group": 8, "id": "capital facilities", "label": "capital facilities", "shape": "dot", "size": 6}, {"group": 8, "id": "deposit into any funds", "label": "deposit into any funds", "shape": "dot", "size": 1}, {"group": 8, "id": "more information", "label": "more information", "shape": "dot", "size": 2}, {"group": 8, "id": "muni.collateral@fhlb.com", "label": "muni.collateral@fhlb.com", "shape": "dot", "size": 2}, {"group": 8, "id": "projects and facilities", "label": "projects and facilities", "shape": "dot", "size": 1}, {"group": 8, "id": "public improvement projects", "label": "public improvement projects", "shape": "dot", "size": 1}, {"group": 8, "id": "capital outlay plan", "label": "capital outlay plan", "shape": "dot", "size": 1}, {"group": 5, "id": "grant", "label": "grant", "shape": "dot", "size": 7}, {"group": 5, "id": "low- and moderate-income, first-time homebuyers or other targeted populations", "label": "low- and moderate-income, first-time homebuyers or other targeted populations", "shape": "dot", "size": 7}, {"group": 5, "id": "second mortgage loan", "label": "second mortgage loan", "shape": "dot", "size": 7}, {"group": 10, "id": "conventional products", "label": "conventional products", "shape": "dot", "size": 2}, {"group": 10, "id": "first-lien mortgage products", "label": "first-lien mortgage products", "shape": "dot", "size": 5}, {"group": 10, "id": "participating lenders", "label": "participating lenders", "shape": "dot", "size": 5}, {"group": 1, "id": "credit rating requirement", "label": "credit rating requirement", "shape": "dot", "size": 1}, {"group": 1, "id": "municipal securities", "label": "municipal securities", "shape": "dot", "size": 10}, {"group": 11, "id": "default in payment", "label": "default in payment", "shape": "dot", "size": 1}, {"group": 11, "id": "revenue bond", "label": "revenue bond", "shape": "dot", "size": 6}, {"group": 6, "id": "hfas", "label": "hfas", "shape": "dot", "size": 3}, {"group": 6, "id": "housing tax credits", "label": "housing tax credits", "shape": "dot", "size": 2}, {"group": 6, "id": "low- and moderate- income families", "label": "low- and moderate- income families", "shape": "dot", "size": 2}, {"group": 6, "id": "subsidy funds", "label": "subsidy funds", "shape": "dot", "size": 2}, {"group": 13, "id": "education revenue bonds", "label": "education revenue bonds", "shape": "dot", "size": 1}, {"group": 13, "id": "higher- education facilities", "label": "higher- education facilities", "shape": "dot", "size": 1}, {"group": 14, "id": "effective date", "label": "effective date", "shape": "dot", "size": 1}, {"group": 14, "id": "municipal security collateral eligibility requirements", "label": "municipal security collateral eligibility requirements", "shape": "dot", "size": 2}, {"group": 11, "id": "essential services", "label": "essential services", "shape": "dot", "size": 3}, {"group": 11, "id": "issuer", "label": "issuer", "shape": "dot", "size": 9}, {"group": 11, "id": "revenue bonds", "label": "revenue bonds", "shape": "dot", "size": 12}, {"group": 11, "id": "security", "label": "security", "shape": "dot", "size": 9}, {"group": 11, "id": "facilities for essential public services", "label": "facilities for essential public services", "shape": "dot", "size": 2}, {"group": 14, "id": "federal home loan bank of dallas", "label": "federal home loan bank of dallas", "shape": "dot", "size": 1}, {"group": 15, "id": "federal programs or through private mortgage insurance", "label": "federal programs or through private mortgage insurance", "shape": "dot", "size": 2}, {"group": 15, "id": "state or local government", "label": "state or local government", "shape": "dot", "size": 8}, {"group": 15, "id": "targeted to first-time homeowners meeting certain income and purchase price requirements", "label": "targeted to first-time homeowners meeting certain income and purchase price requirements", "shape": "dot", "size": 2}, {"group": 10, "id": "financial institutions", "label": "financial institutions", "shape": "dot", "size": 2}, {"group": 10, "id": "low- and moderate-income borrowers", "label": "low- and moderate-income borrowers", "shape": "dot", "size": 2}, {"group": 10, "id": "purpose", "label": "purpose", "shape": "dot", "size": 2}, {"group": 1, "id": "foreign governments", "label": "foreign governments", "shape": "dot", "size": 1}, {"group": 11, "id": "full faith and credit of an issuer with taxing power", "label": "full faith and credit of an issuer with taxing power", "shape": "dot", "size": 1}, {"group": 16, "id": "furniture", "label": "furniture", "shape": "dot", "size": 1}, {"group": 16, "id": "hospital beds and medical equipment ", "label": "hospital beds and medical equipment ", "shape": "dot", "size": 1}, {"group": 15, "id": "general obligation bonds", "label": "general obligation bonds", "shape": "dot", "size": 6}, {"group": 15, "id": "housing revenue bond", "label": "housing revenue bond", "shape": "dot", "size": 2}, {"group": 15, "id": "local units of government", "label": "local units of government", "shape": "dot", "size": 1}, {"group": 15, "id": "multifamily housing projects", "label": "multifamily housing projects", "shape": "dot", "size": 4}, {"group": 15, "id": "single family mortgage revenue bond", "label": "single family mortgage revenue bond", "shape": "dot", "size": 2}, {"group": 15, "id": "single-family homes", "label": "single-family homes", "shape": "dot", "size": 2}, {"group": 15, "id": "state legislature", "label": "state legislature", "shape": "dot", "size": 1}, {"group": 11, "id": "general obligation of the state or municipal governments or their political subdivisions", "label": "general obligation of the state or municipal governments or their political subdivisions", "shape": "dot", "size": 4}, {"group": 17, "id": "grants", "label": "grants", "shape": "dot", "size": 1}, {"group": 17, "id": "pension funding", "label": "pension funding", "shape": "dot", "size": 1}, {"group": 18, "id": "green energy initiatives not related to real estate (e.g. energy efficient traffic lights, street lights, etc.)", "label": "green energy initiatives not related to real estate (e.g. energy efficient traffic lights, street lights, etc.)", "shape": "dot", "size": 1}, {"group": 18, "id": "renewable energy, solar electric system improvement (not related to real estate)", "label": "renewable energy, solar electric system improvement (not related to real estate)", "shape": "dot", "size": 1}, {"group": 11, "id": "guaranteed by the state or municipal governments or their political subdivisions", "label": "guaranteed by the state or municipal governments or their political subdivisions", "shape": "dot", "size": 3}, {"group": 6, "id": "low- and moderate-income renters and homebuyers", "label": "low- and moderate-income renters and homebuyers", "shape": "dot", "size": 1}, {"group": 19, "id": "highways, streets (not tied to any buildings or facilities), roads, bridges", "label": "highways, streets (not tied to any buildings or facilities), roads, bridges", "shape": "dot", "size": 1}, {"group": 19, "id": "transportation vehicles", "label": "transportation vehicles", "shape": "dot", "size": 1}, {"group": 20, "id": "hospital and health care revenue bonds", "label": "hospital and health care revenue bonds", "shape": "dot", "size": 1}, {"group": 20, "id": "hospitals or health care facilities", "label": "hospitals or health care facilities", "shape": "dot", "size": 1}, {"group": 11, "id": "real estate", "label": "real estate", "shape": "dot", "size": 3}, {"group": 11, "id": "state or municipal governments or their political subdivisions (mpcp)", "label": "state or municipal governments or their political subdivisions (mpcp)", "shape": "dot", "size": 3}, {"group": 11, "id": "sufficient tax revenue", "label": "sufficient tax revenue", "shape": "dot", "size": 3}, {"group": 11, "id": "united states", "label": "united states", "shape": "dot", "size": 3}, {"group": 15, "id": "local housing finance agencies", "label": "local housing finance agencies", "shape": "dot", "size": 1}, {"group": 15, "id": "low- and moderate-income families", "label": "low- and moderate-income families", "shape": "dot", "size": 2}, {"group": 15, "id": "mortgage loans", "label": "mortgage loans", "shape": "dot", "size": 2}, {"group": 15, "id": "purchase of mortgage-backed securities", "label": "purchase of mortgage-backed securities", "shape": "dot", "size": 2}, {"group": 1, "id": "security of payment requirements", "label": "security of payment requirements", "shape": "dot", "size": 1}, {"group": 1, "id": "state or municipal governments or their political subdivisions", "label": "state or municipal governments or their political subdivisions", "shape": "dot", "size": 1}, {"group": 1, "id": "valuation requirement", "label": "valuation requirement", "shape": "dot", "size": 1}, {"group": 3, "id": "operational expenses, capitalized operational expenses", "label": "operational expenses, capitalized operational expenses", "shape": "dot", "size": 1}, {"group": 3, "id": "administrative expenses unrelated to real estate or to issuing the municipal securities", "label": "administrative expenses unrelated to real estate or to issuing the municipal securities", "shape": "dot", "size": 1}, {"group": 23, "id": "pipelines (e.g. natural gas pipelines)", "label": "pipelines (e.g. natural gas pipelines)", "shape": "dot", "size": 1}, {"group": 23, "id": "telecommunications network infrastructure", "label": "telecommunications network infrastructure", "shape": "dot", "size": 1}, {"group": 22, "id": "refunding to replace the commercial paper with long-term financing without details on commercial paper proceeds use.", "label": "refunding to replace the commercial paper with long-term financing without details on commercial paper proceeds use.", "shape": "dot", "size": 1}, {"group": 22, "id": "municipal securities listed below", "label": "municipal securities listed below", "shape": "dot", "size": 1}, {"group": 11, "id": "specific source of revenue", "label": "specific source of revenue", "shape": "dot", "size": 1}, {"group": 11, "id": "types of pledges", "label": "types of pledges", "shape": "dot", "size": 1}, {"group": 11, "id": "voter approval", "label": "voter approval", "shape": "dot", "size": 1}, {"group": 11, "id": "projects not considered to be an essential service", "label": "projects not considered to be an essential service", "shape": "dot", "size": 1}, {"group": 9, "id": "software", "label": "software", "shape": "dot", "size": 1}, {"group": 9, "id": "computers", "label": "computers", "shape": "dot", "size": 1}, {"group": 4, "id": "state housing finance agencies", "label": "state housing finance agencies", "shape": "dot", "size": 1}, {"group": 4, "id": "affordable housing and related community development activities", "label": "affordable housing and related community development activities", "shape": "dot", "size": 1}, {"group": 12, "id": "stormwater drainage and flood control improvement", "label": "stormwater drainage and flood control improvement", "shape": "dot", "size": 1}, {"group": 12, "id": "dredging:", "label": "dredging:", "shape": "dot", "size": 1}, {"group": 21, "id": "transportation revenue bonds", "label": "transportation revenue bonds", "shape": "dot", "size": 1}, {"group": 21, "id": "local public transportation projects", "label": "local public transportation projects", "shape": "dot", "size": 1}, {"group": 25, "id": "water and sewer/public power electric utilities bonds", "label": "water and sewer/public power electric utilities bonds", "shape": "dot", "size": 1}, {"group": 25, "id": "sanitation or water utility facilities", "label": "sanitation or water utility facilities", "shape": "dot", "size": 1}, {"group": 24, "id": "water supply or sewer system without facilities or buildings (e.g. pipelines, trunk)", "label": "water supply or sewer system without facilities or buildings (e.g. pipelines, trunk)", "shape": "dot", "size": 1}, {"group": 24, "id": "pumping station ", "label": "pumping station ", "shape": "dot", "size": 1}]);
+                  edges = new vis.DataSet([{"from": "7 revenue bonds", "title": "contextual proximity", "to": "housing revenue bonds", "width": 1.5}, {"from": "7 revenue bonds", "title": "contextual proximity", "to": "issuer requirements", "width": 1.0}, {"from": "7 revenue bonds", "title": "contextual proximity", "to": "real estate nexus", "width": 0.5}, {"from": "7 revenue bonds", "title": "contextual proximity", "to": "use of proceeds requirements", "width": 1.0}, {"from": "acquisition of real estate", "title": "equipment purchases and upgrades may involve the acquisition or lease of real estate, which involves various legal and financial processes.,contextual proximity", "to": "equipment purchases and upgrades", "width": 3.25}, {"from": "acquisition of real estate", "title": "food stores may be acquired through the purchase or lease of real estate, which involves various legal and financial processes.,contextual proximity", "to": "food stores", "width": 7.75}, {"from": "acquisition of real estate", "title": "jails may be acquired through the purchase or lease of real estate, which involves various legal and financial processes.,contextual proximity", "to": "jails", "width": 7.75}, {"from": "acquisition of real estate", "title": "contextual proximity", "to": "land improvement", "width": 13.5}, {"from": "acquisition of real estate", "title": "contextual proximity", "to": "low- and moderate-cost housing", "width": 2.25}, {"from": "acquisition of real estate", "title": "maintaining existing facilities may require the acquisition or lease of real estate, which involves various legal and financial processes.,contextual proximity", "to": "maintaining existing facilities", "width": 3.25}, {"from": "acquisition of real estate", "title": "contextual proximity", "to": "multifamily housing", "width": 2.25}, {"from": "acquisition of real estate", "title": "nursing homes may be acquired through the purchase or lease of real estate, which involves various legal and financial processes.,contextual proximity", "to": "nursing homes", "width": 7.75}, {"from": "acquisition of real estate", "title": "org operating expenses may involve the acquisition or lease of real estate, which involves various legal and financial processes.,contextual proximity", "to": "org operating expenses", "width": 3.25}, {"from": "acquisition of real estate", "title": "park and recreational facilities may be acquired through the purchase or lease of real estate, which involves various legal and financial processes.,contextual proximity", "to": "park and recreational facilities", "width": 7.75}, {"from": "acquisition of real estate", "title": "contextual proximity", "to": "public facilities", "width": 13.5}, {"from": "acquisition of real estate", "title": "schools may be acquired through the purchase or lease of real estate, which involves various legal and financial processes.,contextual proximity", "to": "school or school upgrades", "width": 7.75}, {"from": "acquisition of real estate", "title": "single-family housing may be acquired through the purchase or lease of real estate. Acquiring real estate can also involve various legal and financial processes.,contextual proximity", "to": "single-family housing", "width": 12.25}, {"from": "assistance", "title": "contextual proximity", "to": "combination with a first mortgage product offered by the hfa", "width": 0.5}, {"from": "assistance", "title": "contextual proximity", "to": "down payment and closing cost assistance", "width": 1.5}, {"from": "assistance", "title": "contextual proximity", "to": "down payment and closing cost assistance (as offered by hfas)", "width": 1.0}, {"from": "assistance", "title": "contextual proximity", "to": "first-time homebuyers", "width": 0.75}, {"from": "assistance", "title": "contextual proximity", "to": "low- and moderate-income", "width": 0.5}, {"from": "assistance", "title": "State Housing Finance Agencies (HFAs) offer assistance in the form of a grant or a second mortgage loan, which covers down payment and/or closing costs for low- and moderate-income, first-time homebuyers or other targeted populations.,contextual proximity", "to": "state housing finance agencies (hfas)", "width": 2.0}, {"from": "assistance", "title": "contextual proximity", "to": "targeted populations", "width": 0.75}, {"from": "below market financing options", "title": "contextual proximity", "to": "developers", "width": 0.5}, {"from": "below market financing options", "title": "contextual proximity", "to": "rental programs", "width": 1.5}, {"from": "bonds issued by municipal water and sewer authority", "title": "A bond issued by a municipal water and sewer authority typically would involve revenues obtained through local water and sewer assessments.", "to": "local water and sewer assessments", "width": 1.0}, {"from": "borrowers", "title": "contextual proximity", "to": "developers", "width": 0.5}, {"from": "borrowers", "title": "contextual proximity", "to": "rental programs", "width": 1.5}, {"from": "capital facilities", "title": "contextual proximity", "to": "deposit into any funds", "width": 0.75}, {"from": "capital facilities", "title": "contextual proximity", "to": "more information", "width": 0.75}, {"from": "capital facilities", "title": "contextual proximity", "to": "muni.collateral@fhlb.com", "width": 0.75}, {"from": "capital facilities", "title": "contextual proximity", "to": "projects and facilities", "width": 0.75}, {"from": "capital facilities", "title": "contextual proximity", "to": "public improvement projects", "width": 0.75}, {"from": "capital facilities", "title": "All four of them represent various types of plans and projects that a municipality may undertake for capital expenditure.", "to": "capital outlay plan", "width": 1.0}, {"from": "combination with a first mortgage product offered by the hfa", "title": "Most HFAs require that the vast majority of HFA down payment assistance programs be used in combination with a first mortgage product offered by the HFA.,contextual proximity", "to": "down payment and closing cost assistance", "width": 4.0}, {"from": "combination with a first mortgage product offered by the hfa", "title": "Most HFAs require that the vast majority of HFA down payment assistance programs be used in combination with a first mortgage product offered by the HFA.,contextual proximity", "to": "down payment and closing cost assistance (as offered by hfas)", "width": 3.0}, {"from": "combination with a first mortgage product offered by the hfa", "title": "contextual proximity", "to": "first-time homebuyers", "width": 1.5}, {"from": "combination with a first mortgage product offered by the hfa", "title": "contextual proximity", "to": "grant", "width": 0.5}, {"from": "combination with a first mortgage product offered by the hfa", "title": "contextual proximity", "to": "low- and moderate-income", "width": 1.0}, {"from": "combination with a first mortgage product offered by the hfa", "title": "contextual proximity", "to": "low- and moderate-income, first-time homebuyers or other targeted populations", "width": 0.5}, {"from": "combination with a first mortgage product offered by the hfa", "title": "contextual proximity", "to": "second mortgage loan", "width": 0.5}, {"from": "combination with a first mortgage product offered by the hfa", "title": "contextual proximity", "to": "state housing finance agencies (hfas)", "width": 2.0}, {"from": "combination with a first mortgage product offered by the hfa", "title": "contextual proximity", "to": "targeted populations", "width": 1.5}, {"from": "conventional products", "title": "HFAs may purchase CONVENTIONAL PRODUCTS from the Federal Housing Administration (FHA), the U.S. Department of Veterans Affairs (VA), and the U.S. Department of Agriculture (USDA).,contextual proximity", "to": "first-lien mortgage products", "width": 2.0}, {"from": "conventional products", "title": "contextual proximity", "to": "participating lenders", "width": 0.5}, {"from": "credit rating requirement", "title": "Many municipal securities are also subject to credit rating requirements, which reflect the issuer\u0027s financial strength and ability to make timely payments of principal and interest. Credit ratings may affect the yield and marketability of these securities.,contextual proximity", "to": "municipal securities", "width": 2.5}, {"from": "default in payment", "title": "If the specified source(s) of revenue become inadequate, a default in payment of principal or interest may occur for revenue bonds.,contextual proximity", "to": "revenue bond", "width": 2.5}, {"from": "developers", "title": "contextual proximity", "to": "hfas", "width": 0.5}, {"from": "developers", "title": "Developers raise private equity by selling federal tax credits to investors through housing tax credits.,contextual proximity", "to": "housing tax credits", "width": 1.5}, {"from": "developers", "title": "contextual proximity", "to": "low- and moderate- income families", "width": 0.5}, {"from": "developers", "title": "contextual proximity", "to": "rental programs", "width": 3.0}, {"from": "developers", "title": "contextual proximity", "to": "subsidy funds", "width": 0.5}, {"from": "down payment and closing cost assistance", "title": "contextual proximity", "to": "down payment and closing cost assistance (as offered by hfas)", "width": 6.0}, {"from": "down payment and closing cost assistance", "title": "contextual proximity", "to": "first-time homebuyers", "width": 4.5}, {"from": "down payment and closing cost assistance", "title": "contextual proximity", "to": "grant", "width": 1.5}, {"from": "down payment and closing cost assistance", "title": "contextual proximity", "to": "low- and moderate-income", "width": 3.0}, {"from": "down payment and closing cost assistance", "title": "contextual proximity", "to": "low- and moderate-income, first-time homebuyers or other targeted populations", "width": 1.5}, {"from": "down payment and closing cost assistance", "title": "contextual proximity", "to": "second mortgage loan", "width": 1.5}, {"from": "down payment and closing cost assistance", "title": "contextual proximity", "to": "state housing finance agencies (hfas)", "width": 6.0}, {"from": "down payment and closing cost assistance", "title": "contextual proximity", "to": "targeted populations", "width": 4.5}, {"from": "down payment and closing cost assistance (as offered by hfas)", "title": "contextual proximity", "to": "first-time homebuyers", "width": 3.0}, {"from": "down payment and closing cost assistance (as offered by hfas)", "title": "contextual proximity", "to": "grant", "width": 1.0}, {"from": "down payment and closing cost assistance (as offered by hfas)", "title": "contextual proximity", "to": "low- and moderate-income", "width": 2.0}, {"from": "down payment and closing cost assistance (as offered by hfas)", "title": "contextual proximity", "to": "low- and moderate-income, first-time homebuyers or other targeted populations", "width": 1.0}, {"from": "down payment and closing cost assistance (as offered by hfas)", "title": "contextual proximity", "to": "second mortgage loan", "width": 1.0}, {"from": "down payment and closing cost assistance (as offered by hfas)", "title": "contextual proximity", "to": "state housing finance agencies (hfas)", "width": 4.0}, {"from": "down payment and closing cost assistance (as offered by hfas)", "title": "contextual proximity", "to": "targeted populations", "width": 3.0}, {"from": "education revenue bonds", "title": "Finance, like public and private colleges, or help with ongoing operations.", "to": "higher- education facilities", "width": 1.0}, {"from": "effective date", "title": "The effective date for the Municipal Security Collateral Eligibility Requirements is July 31, 2024.,contextual proximity", "to": "municipal security collateral eligibility requirements", "width": 1.5}, {"from": "equipment purchases and upgrades", "title": "contextual proximity", "to": "food stores", "width": 0.75}, {"from": "equipment purchases and upgrades", "title": "contextual proximity", "to": "jails", "width": 0.75}, {"from": "equipment purchases and upgrades", "title": "contextual proximity", "to": "land improvement", "width": 1.5}, {"from": "equipment purchases and upgrades", "title": "contextual proximity", "to": "nursing homes", "width": 0.75}, {"from": "equipment purchases and upgrades", "title": "contextual proximity", "to": "park and recreational facilities", "width": 0.75}, {"from": "equipment purchases and upgrades", "title": "contextual proximity", "to": "public facilities", "width": 1.5}, {"from": "equipment purchases and upgrades", "title": "contextual proximity", "to": "school or school upgrades", "width": 0.75}, {"from": "equipment purchases and upgrades", "title": "contextual proximity", "to": "single-family housing", "width": 1.25}, {"from": "essential services", "title": "contextual proximity", "to": "issuer", "width": 0.5}, {"from": "essential services", "title": "Finance the acquisition, development or improvement of real estate in support of essential services.,contextual proximity", "to": "revenue bonds", "width": 1.5}, {"from": "essential services", "title": "contextual proximity", "to": "security", "width": 0.75}, {"from": "facilities for essential public services", "title": "Some revenue bonds are issued by governmental agencies to fund facilities for essential public services, such as transportation infrastructure or water and sewer systems.,contextual proximity", "to": "revenue bond", "width": 2.5}, {"from": "facilities for essential public services", "title": "Revenue bonds are issued by governmental agencies to fund facilities for essential public services.", "to": "revenue bonds", "width": 1.0}, {"from": "federal home loan bank of dallas", "title": "The Federal Home Loan Bank of Dallas follows the Municipal Security Collateral Eligibility Requirements, which are effective as of July 31, 2024.,contextual proximity", "to": "municipal security collateral eligibility requirements", "width": 1.5}, {"from": "federal programs or through private mortgage insurance", "title": "contextual proximity", "to": "state or local government", "width": 0.5}, {"from": "federal programs or through private mortgage insurance", "title": "Repayment of the mortgages may be further secured by", "to": "targeted to first-time homeowners meeting certain income and purchase price requirements", "width": 1.0}, {"from": "financial institutions", "title": "contextual proximity", "to": "first-lien mortgage products", "width": 1.0}, {"from": "financial institutions", "title": "Participating lenders are financial institutions that are approved by the HFA to offer FIRST-LIEN MORTGAGE PRODUCTS.,contextual proximity", "to": "participating lenders", "width": 1.5}, {"from": "first-lien mortgage products", "title": "contextual proximity", "to": "low- and moderate-income borrowers", "width": 1.0}, {"from": "first-lien mortgage products", "title": "contextual proximity", "to": "participating lenders", "width": 2.0}, {"from": "first-lien mortgage products", "title": "contextual proximity", "to": "purpose", "width": 1.0}, {"from": "first-time homebuyers", "title": "contextual proximity", "to": "grant", "width": 0.75}, {"from": "first-time homebuyers", "title": "contextual proximity", "to": "low- and moderate-income", "width": 1.5}, {"from": "first-time homebuyers", "title": "contextual proximity", "to": "low- and moderate-income, first-time homebuyers or other targeted populations", "width": 0.75}, {"from": "first-time homebuyers", "title": "contextual proximity", "to": "second mortgage loan", "width": 0.75}, {"from": "first-time homebuyers", "title": "Most HFAs require that the vast majority of HFA down payment assistance programs be used in combination with a first mortgage product offered by the HFA.,contextual proximity", "to": "state housing finance agencies (hfas)", "width": 4.0}, {"from": "first-time homebuyers", "title": "contextual proximity", "to": "targeted populations", "width": 2.25}, {"from": "food stores", "title": "contextual proximity", "to": "jails", "width": 2.25}, {"from": "food stores", "title": "contextual proximity", "to": "land improvement", "width": 4.5}, {"from": "food stores", "title": "contextual proximity", "to": "low- and moderate-cost housing", "width": 0.75}, {"from": "food stores", "title": "contextual proximity", "to": "maintaining existing facilities", "width": 0.75}, {"from": "food stores", "title": "contextual proximity", "to": "multifamily housing", "width": 0.75}, {"from": "food stores", "title": "contextual proximity", "to": "nursing homes", "width": 2.25}, {"from": "food stores", "title": "contextual proximity", "to": "org operating expenses", "width": 0.75}, {"from": "food stores", "title": "contextual proximity", "to": "park and recreational facilities", "width": 2.25}, {"from": "food stores", "title": "contextual proximity", "to": "public facilities", "width": 4.5}, {"from": "food stores", "title": "contextual proximity", "to": "school or school upgrades", "width": 2.25}, {"from": "food stores", "title": "contextual proximity", "to": "single-family housing", "width": 3.75}, {"from": "foreign governments", "title": "Municipal securities issued by foreign governments are not eligible.,contextual proximity", "to": "municipal securities", "width": 1.75}, {"from": "full faith and credit of an issuer with taxing power", "title": "Unlike bonds payable from the full faith and credit of an issuer with taxing power, revenue bonds are not obligated to be paid using any source other than the specific source pledged.,contextual proximity", "to": "revenue bond", "width": 2.5}, {"from": "furniture", "title": "Both furniture and hospital beds along with medical equipment are used to provide necessary amenities and facilities for the welfare of the people.", "to": "hospital beds and medical equipment ", "width": 1.0}, {"from": "general obligation bonds", "title": "contextual proximity", "to": "housing revenue bond", "width": 0.5}, {"from": "general obligation bonds", "title": "contextual proximity", "to": "local units of government", "width": 0.5}, {"from": "general obligation bonds", "title": "contextual proximity", "to": "multifamily housing projects", "width": 0.5}, {"from": "general obligation bonds", "title": "contextual proximity", "to": "single family mortgage revenue bond", "width": 0.5}, {"from": "general obligation bonds", "title": "contextual proximity", "to": "single-family homes", "width": 0.5}, {"from": "general obligation bonds", "title": "contextual proximity", "to": "state legislature", "width": 0.5}, {"from": "general obligation of the state or municipal governments or their political subdivisions", "title": "contextual proximity", "to": "issuer", "width": 0.5}, {"from": "general obligation of the state or municipal governments or their political subdivisions", "title": "The security must be issued as a General obligation of the state or municipal governments or their political subdivisions, or,contextual proximity", "to": "municipal securities", "width": 1.75}, {"from": "general obligation of the state or municipal governments or their political subdivisions", "title": "contextual proximity", "to": "revenue bonds", "width": 0.5}, {"from": "general obligation of the state or municipal governments or their political subdivisions", "title": "Can be issued as security for payments made under the security.,contextual proximity", "to": "security", "width": 1.75}, {"from": "grant", "title": "contextual proximity", "to": "low- and moderate-income", "width": 0.5}, {"from": "grant", "title": "contextual proximity", "to": "state housing finance agencies (hfas)", "width": 1.0}, {"from": "grant", "title": "contextual proximity", "to": "targeted populations", "width": 0.75}, {"from": "grants", "title": "Both grants and pension funding fall under the category of financial aid provided by various organizations or entities to municipalities.", "to": "pension funding", "width": 1.0}, {"from": "green energy initiatives not related to real estate (e.g. energy efficient traffic lights, street lights, etc.)", "title": "Both green energy initiatives and renewable energy projects contribute towards the creation of a sustainable environment.", "to": "renewable energy, solar electric system improvement (not related to real estate)", "width": 1.0}, {"from": "guaranteed by the state or municipal governments or their political subdivisions", "title": "contextual proximity", "to": "issuer", "width": 0.5}, {"from": "guaranteed by the state or municipal governments or their political subdivisions", "title": "contextual proximity", "to": "revenue bonds", "width": 0.5}, {"from": "guaranteed by the state or municipal governments or their political subdivisions", "title": "Can be guaranteed by the state or municipal governments or their political subdivisions for payments made under the security.,contextual proximity", "to": "security", "width": 1.75}, {"from": "hfas", "title": "Most are quasi-governmental entities that operate as financially independent organizations and are governed by a state-appointed board of directors. HFAs generally have the mission to provide funding to increase and sustain affordable rental options and homeownership opportunities, most often targeted toward low- and moderate-income renters and homebuyers and/or special populations such as first-time homebuyers, active military and veterans, police and teachers, individuals with disabilities and homeless individuals.", "to": "low- and moderate-income renters and homebuyers", "width": 1.0}, {"from": "hfas", "title": "HFAs offer a variety of rental programs aimed at increasing rental and multifamily development within their states for low- and moderate- income families.,contextual proximity", "to": "rental programs", "width": 2.5}, {"from": "highways, streets (not tied to any buildings or facilities), roads, bridges", "title": "Both highways, streets, roads, and bridges are used for transportation purposes along with transportation vehicles like buses.", "to": "transportation vehicles", "width": 1.0}, {"from": "hospital and health care revenue bonds", "title": "Finance the construction or expansion of", "to": "hospitals or health care facilities", "width": 1.0}, {"from": "housing revenue bond", "title": "Bonds issued to finance multifamily housing projects or single-family home mortgages are typically called housing revenue bonds.", "to": "multifamily housing projects", "width": 1.0}, {"from": "housing revenue bonds", "title": "contextual proximity", "to": "issuer requirements", "width": 1.5}, {"from": "housing revenue bonds", "title": "The issuance of the Housing Revenue Bonds is subject to certain requirements related to real estate, as set forth in Section 9.,contextual proximity", "to": "real estate nexus", "width": 1.75}, {"from": "housing revenue bonds", "title": "contextual proximity", "to": "use of proceeds requirements", "width": 1.5}, {"from": "housing tax credits", "title": "contextual proximity", "to": "rental programs", "width": 1.5}, {"from": "issuer", "title": "contextual proximity", "to": "real estate", "width": 0.5}, {"from": "issuer", "title": "contextual proximity", "to": "revenue bonds", "width": 1.0}, {"from": "issuer", "title": "contextual proximity", "to": "security", "width": 1.5}, {"from": "issuer", "title": "contextual proximity", "to": "state or municipal governments or their political subdivisions (mpcp)", "width": 0.5}, {"from": "issuer", "title": "contextual proximity", "to": "sufficient tax revenue", "width": 0.5}, {"from": "issuer", "title": "contextual proximity", "to": "united states", "width": 0.5}, {"from": "issuer requirements", "title": "Municipal securities, such as bonds or notes, are typically issued by municipalities, counties, or other local government entities to raise funds for various purposes. The issuance of these securities is subject to certain requirements, which may include creditworthiness standards, disclosure requirements, and regulatory oversight.,contextual proximity", "to": "municipal securities", "width": 2.5}, {"from": "issuer requirements", "title": "contextual proximity", "to": "real estate nexus", "width": 0.5}, {"from": "issuer requirements", "title": "contextual proximity", "to": "use of proceeds requirements", "width": 1.25}, {"from": "jails", "title": "contextual proximity", "to": "land improvement", "width": 4.5}, {"from": "jails", "title": "contextual proximity", "to": "low- and moderate-cost housing", "width": 0.75}, {"from": "jails", "title": "contextual proximity", "to": "maintaining existing facilities", "width": 0.75}, {"from": "jails", "title": "contextual proximity", "to": "multifamily housing", "width": 0.75}, {"from": "jails", "title": "contextual proximity", "to": "nursing homes", "width": 2.25}, {"from": "jails", "title": "contextual proximity", "to": "org operating expenses", "width": 0.75}, {"from": "jails", "title": "contextual proximity", "to": "park and recreational facilities", "width": 2.25}, {"from": "jails", "title": "contextual proximity", "to": "public facilities", "width": 4.5}, {"from": "jails", "title": "contextual proximity", "to": "school or school upgrades", "width": 2.25}, {"from": "jails", "title": "contextual proximity", "to": "single-family housing", "width": 3.75}, {"from": "land improvement", "title": "contextual proximity", "to": "low- and moderate-cost housing", "width": 1.5}, {"from": "land improvement", "title": "contextual proximity", "to": "maintaining existing facilities", "width": 1.5}, {"from": "land improvement", "title": "contextual proximity", "to": "multifamily housing", "width": 1.5}, {"from": "land improvement", "title": "nursing homes are often constructed on improved land, and their construction and maintenance may involve land improvement activities such as site preparation, grading, and drainage control.,contextual proximity", "to": "nursing homes", "width": 5.5}, {"from": "land improvement", "title": "contextual proximity", "to": "org operating expenses", "width": 1.5}, {"from": "land improvement", "title": "park and recreational facilities may be constructed on improved land, and their construction and maintenance may involve land improvement activities such as site preparation, grading, and drainage control.,contextual proximity", "to": "park and recreational facilities", "width": 5.5}, {"from": "land improvement", "title": "contextual proximity", "to": "public facilities", "width": 9.0}, {"from": "land improvement", "title": "schools are often constructed on improved land, and their construction and maintenance may involve land improvement activities such as site preparation, grading, and drainage control.,contextual proximity", "to": "school or school upgrades", "width": 5.5}, {"from": "land improvement", "title": "single-family housing is typically built on improved land, which has been cleared of obstructions, leveled, and graded to make it suitable for construction. Land improvement can also include activities such as drainage control, erosion prevention, and soil stabilization.,contextual proximity", "to": "single-family housing", "width": 8.5}, {"from": "local housing finance agencies", "title": "contextual proximity", "to": "state or local government", "width": 0.5}, {"from": "low- and moderate- income families", "title": "contextual proximity", "to": "rental programs", "width": 1.5}, {"from": "low- and moderate-cost housing", "title": "contextual proximity", "to": "nursing homes", "width": 0.75}, {"from": "low- and moderate-cost housing", "title": "contextual proximity", "to": "park and recreational facilities", "width": 0.75}, {"from": "low- and moderate-cost housing", "title": "contextual proximity", "to": "public facilities", "width": 1.5}, {"from": "low- and moderate-cost housing", "title": "contextual proximity", "to": "school or school upgrades", "width": 0.75}, {"from": "low- and moderate-cost housing", "title": "both aim to provide affordable accommodation options for people who cannot afford market rates. The main difference is the income criteria that determines eligibility.,contextual proximity", "to": "single-family housing", "width": 2.25}, {"from": "low- and moderate-income", "title": "contextual proximity", "to": "low- and moderate-income, first-time homebuyers or other targeted populations", "width": 0.5}, {"from": "low- and moderate-income", "title": "contextual proximity", "to": "second mortgage loan", "width": 0.5}, {"from": "low- and moderate-income", "title": "State Housing Finance Agencies (HFAs) offer assistance in the form of a grant or a second mortgage loan, which covers down payment and/or closing costs for these populations.,contextual proximity", "to": "state housing finance agencies (hfas)", "width": 3.0}, {"from": "low- and moderate-income", "title": "contextual proximity", "to": "targeted populations", "width": 1.5}, {"from": "low- and moderate-income borrowers", "title": "contextual proximity", "to": "participating lenders", "width": 0.5}, {"from": "low- and moderate-income families", "title": "contextual proximity", "to": "state or local government", "width": 0.5}, {"from": "low- and moderate-income families", "title": "targeted specifically towards elderly residents. These securities may provide financing either directly or through a loans-to-lenders program,", "to": "multifamily housing projects", "width": 1.0}, {"from": "low- and moderate-income, first-time homebuyers or other targeted populations", "title": "contextual proximity", "to": "state housing finance agencies (hfas)", "width": 1.0}, {"from": "low- and moderate-income, first-time homebuyers or other targeted populations", "title": "contextual proximity", "to": "targeted populations", "width": 0.75}, {"from": "maintaining existing facilities", "title": "contextual proximity", "to": "nursing homes", "width": 0.75}, {"from": "maintaining existing facilities", "title": "contextual proximity", "to": "park and recreational facilities", "width": 0.75}, {"from": "maintaining existing facilities", "title": "contextual proximity", "to": "public facilities", "width": 1.5}, {"from": "maintaining existing facilities", "title": "contextual proximity", "to": "school or school upgrades", "width": 0.75}, {"from": "maintaining existing facilities", "title": "contextual proximity", "to": "single-family housing", "width": 1.25}, {"from": "more information", "title": "The email address muni.collateral@fhlb.com is provided for those seeking more information about capital facilities or related concepts. Without further details provided, it is unclear whether this information will specifically address the concepts mentioned in this context.", "to": "muni.collateral@fhlb.com", "width": 1.0}, {"from": "mortgage loans", "title": "Note: Purchase of mortgage loans also includes the purchase of", "to": "purchase of mortgage-backed securities", "width": 1.0}, {"from": "mortgage loans", "title": "contextual proximity", "to": "state or local government", "width": 0.5}, {"from": "multifamily housing", "title": "contextual proximity", "to": "nursing homes", "width": 0.75}, {"from": "multifamily housing", "title": "contextual proximity", "to": "park and recreational facilities", "width": 0.75}, {"from": "multifamily housing", "title": "contextual proximity", "to": "public facilities", "width": 1.5}, {"from": "multifamily housing", "title": "contextual proximity", "to": "school or school upgrades", "width": 0.75}, {"from": "multifamily housing", "title": "both fall under the category of residential buildings and serve as accommodations for individuals or families. They differ in the number of households they can house, with single-family housing housing one household and multifamily housing housing multiple households.,contextual proximity", "to": "single-family housing", "width": 2.25}, {"from": "multifamily housing projects", "title": "contextual proximity", "to": "state or local government", "width": 0.5}, {"from": "municipal securities", "title": "contextual proximity", "to": "revenue bonds", "width": 1.5}, {"from": "municipal securities", "title": "contextual proximity", "to": "security of payment requirements", "width": 1.5}, {"from": "municipal securities", "title": "contextual proximity", "to": "state or local government", "width": 0.5}, {"from": "municipal securities", "title": "contextual proximity", "to": "state or municipal governments or their political subdivisions", "width": 0.75}, {"from": "municipal securities", "title": "contextual proximity", "to": "use of proceeds requirements", "width": 1.5}, {"from": "municipal securities", "title": "contextual proximity", "to": "valuation requirement", "width": 1.5}, {"from": "nursing homes", "title": "contextual proximity", "to": "org operating expenses", "width": 0.75}, {"from": "nursing homes", "title": "contextual proximity", "to": "park and recreational facilities", "width": 2.25}, {"from": "nursing homes", "title": "contextual proximity", "to": "public facilities", "width": 4.5}, {"from": "nursing homes", "title": "contextual proximity", "to": "school or school upgrades", "width": 2.25}, {"from": "nursing homes", "title": "contextual proximity", "to": "single-family housing", "width": 3.75}, {"from": "operational expenses, capitalized operational expenses", "title": "All three of them represent various types of expenses that a municipality might incur in carrying out its operations.", "to": "administrative expenses unrelated to real estate or to issuing the municipal securities", "width": 1.0}, {"from": "org operating expenses", "title": "contextual proximity", "to": "park and recreational facilities", "width": 0.75}, {"from": "org operating expenses", "title": "contextual proximity", "to": "public facilities", "width": 1.5}, {"from": "org operating expenses", "title": "contextual proximity", "to": "school or school upgrades", "width": 0.75}, {"from": "org operating expenses", "title": "contextual proximity", "to": "single-family housing", "width": 1.25}, {"from": "park and recreational facilities", "title": "contextual proximity", "to": "public facilities", "width": 4.5}, {"from": "park and recreational facilities", "title": "contextual proximity", "to": "school or school upgrades", "width": 2.25}, {"from": "park and recreational facilities", "title": "contextual proximity", "to": "single-family housing", "width": 3.75}, {"from": "participating lenders", "title": "contextual proximity", "to": "purpose", "width": 0.5}, {"from": "pipelines (e.g. natural gas pipelines)", "title": "Both pipelines and telecommunications networks serve as essential components of a municipality\u0027s infrastructure.", "to": "telecommunications network infrastructure", "width": 1.0}, {"from": "public facilities", "title": "schools are a type of public facility, specifically focused on providing education to the community. School upgrades refer to renovations and improvements made to existing schools.,contextual proximity", "to": "school or school upgrades", "width": 5.5}, {"from": "public facilities", "title": "public facilities serve the community as a whole, while single-family housing serves an individual household. Public facilities may include parks, libraries, and transportation infrastructure, among others.,contextual proximity", "to": "single-family housing", "width": 8.5}, {"from": "purchase of mortgage-backed securities", "title": "contextual proximity", "to": "state or local government", "width": 0.5}, {"from": "real estate", "title": "Partial real estate percentage will be applied to any pledged amount if the security is partially real estate-related.,contextual proximity", "to": "revenue bonds", "width": 1.5}, {"from": "real estate", "title": "contextual proximity", "to": "security", "width": 0.75}, {"from": "real estate nexus", "title": "contextual proximity", "to": "use of proceeds requirements", "width": 0.5}, {"from": "refunding to replace the commercial paper with long-term financing without details on commercial paper proceeds use.", "title": "Both refer to various financial instruments that a municipality may issue for raising funds.", "to": "municipal securities listed below", "width": 1.0}, {"from": "rental programs", "title": "HFAs allocate subsidy funds directly to projects through their rental programs.,contextual proximity", "to": "subsidy funds", "width": 2.5}, {"from": "revenue bond", "title": "contextual proximity", "to": "specific source of revenue", "width": 1.5}, {"from": "revenue bond", "title": "contextual proximity", "to": "types of pledges", "width": 1.5}, {"from": "revenue bond", "title": "contextual proximity", "to": "voter approval", "width": 1.5}, {"from": "revenue bonds", "title": "Exclusions", "to": "projects not considered to be an essential service", "width": 1.0}, {"from": "revenue bonds", "title": "contextual proximity", "to": "security", "width": 1.5}, {"from": "revenue bonds", "title": "contextual proximity", "to": "state or municipal governments or their political subdivisions (mpcp)", "width": 0.5}, {"from": "revenue bonds", "title": "contextual proximity", "to": "sufficient tax revenue", "width": 0.5}, {"from": "revenue bonds", "title": "contextual proximity", "to": "united states", "width": 0.5}, {"from": "school or school upgrades", "title": "contextual proximity", "to": "single-family housing", "width": 3.75}, {"from": "second mortgage loan", "title": "contextual proximity", "to": "state housing finance agencies (hfas)", "width": 1.0}, {"from": "second mortgage loan", "title": "contextual proximity", "to": "targeted populations", "width": 0.75}, {"from": "security", "title": "contextual proximity", "to": "state or municipal governments or their political subdivisions (mpcp)", "width": 0.75}, {"from": "security", "title": "contextual proximity", "to": "sufficient tax revenue", "width": 0.75}, {"from": "security", "title": "contextual proximity", "to": "united states", "width": 0.75}, {"from": "single family mortgage revenue bond", "title": "Bonds issued to finance mortgage loans on single-family homes are either directly purchased by the issuer or indirectly used to purchase mortgage loans through bond proceeds.", "to": "single-family homes", "width": 1.0}, {"from": "software", "title": "Both software and computers fall under the category of technological equipment used in various municipal projects.", "to": "computers", "width": 1.0}, {"from": "state housing finance agencies", "title": "STATE HOUSING FINANCE AGENCIES (HFAs) are state chartered, nonprofit organizations that provide financing and services for affordable housing and related community development activities.", "to": "affordable housing and related community development activities", "width": 1.0}, {"from": "state housing finance agencies (hfas)", "title": "contextual proximity", "to": "targeted populations", "width": 3.0}, {"from": "state or local government", "title": "contextual proximity", "to": "targeted to first-time homeowners meeting certain income and purchase price requirements", "width": 0.5}, {"from": "stormwater drainage and flood control improvement", "title": "Both stormwater drainage and flood control improvement projects aim to mitigate the effects of natural disasters like heavy rains or flooding.", "to": "dredging:", "width": 1.0}, {"from": "transportation revenue bonds", "title": "Finance, such as subway systems, rail, etc.", "to": "local public transportation projects", "width": 1.0}, {"from": "water and sewer/public power electric utilities bonds", "title": "Finance the construction and improvement of", "to": "sanitation or water utility facilities", "width": 1.0}, {"from": "water supply or sewer system without facilities or buildings (e.g. pipelines, trunk)", "title": "Both water supply and sewer systems are essential components of a municipality\u0027s infrastructure while pumping stations help in managing the water flow.", "to": "pumping station ", "width": 1.0}]);
+
+                  nodeColors = {};
+                  allNodes = nodes.get({ returnType: "Object" });
+                  for (nodeId in allNodes) {
+                    nodeColors[nodeId] = allNodes[nodeId].color;
+                  }
+                  allEdges = edges.get({ returnType: "Object" });
+                  // adding nodes and edges to the graph
+                  data = {nodes: nodes, edges: edges};
+
+                  var options = {
+    "configure": {
+        "enabled": true,
+        "filter": [
+            "physics"
+        ]
+    },
+    "edges": {
+        "color": {
+            "inherit": true
+        },
+        "smooth": {
+            "enabled": true,
+            "type": "dynamic"
+        }
+    },
+    "interaction": {
+        "dragNodes": true,
+        "hideEdgesOnDrag": false,
+        "hideNodesOnDrag": false
+    },
+    "physics": {
+        "enabled": true,
+        "forceAtlas2Based": {
+            "avoidOverlap": 0,
+            "centralGravity": 0.015,
+            "damping": 0.4,
+            "gravitationalConstant": -31,
+            "springConstant": 0.08,
+            "springLength": 100
+        },
+        "solver": "forceAtlas2Based",
+        "stabilization": {
+            "enabled": true,
+            "fit": true,
+            "iterations": 1000,
+            "onlyDynamicEdges": false,
+            "updateInterval": 50
+        }
+    }
+};
+
+                  
+
+
+                  
+                  // if this network requires displaying the configure window,
+                  // put it in its div
+                  options.configure["container"] = document.getElementById("config");
+                  
+
+                  network = new vis.Network(container, data, options);
+
+                  
+
+                  
+                    network.on("selectNode", neighbourhoodHighlight);
+                  
+
+                  
+
+
+                  
+                      network.on("stabilizationProgress", function(params) {
+                          document.getElementById('loadingBar').removeAttribute("style");
+                          var maxWidth = 496;
+                          var minWidth = 20;
+                          var widthFactor = params.iterations/params.total;
+                          var width = Math.max(minWidth,maxWidth * widthFactor);
+                          document.getElementById('bar').style.width = width + 'px';
+                          document.getElementById('text').innerHTML = Math.round(widthFactor*100) + '%';
+                      });
+                      network.once("stabilizationIterationsDone", function() {
+                          document.getElementById('text').innerHTML = '100%';
+                          document.getElementById('bar').style.width = '496px';
+                          document.getElementById('loadingBar').style.opacity = 0;
+                          // really clean the dom element
+                          setTimeout(function () {document.getElementById('loadingBar').style.display = 'none';}, 500);
+                      });
+                  
+
+                  return network;
+
+              }
+              drawGraph();
+        </script>
+    </body>
+</html>
